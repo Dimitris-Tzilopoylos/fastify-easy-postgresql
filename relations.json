@@ -1,0 +1,22 @@
+{
+  "products": [
+    {
+      "from_table": "products",
+      "from_column": "category_id",
+      "to_table": "product_categories",
+      "to_column": "id",
+      "type": "object",
+      "alias": "category"
+    }
+  ],
+  "product_categories": [
+    {
+      "from_table": "product_categories",
+      "from_column": "id",
+      "to_table": "products",
+      "to_column": "category_id",
+      "type": "array",
+      "alias": "products"
+    }
+  ]
+}
