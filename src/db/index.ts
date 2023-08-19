@@ -6,7 +6,7 @@ import {
 } from "easy-postgresql";
 import { EngineQueries, schema } from "./constants";
 import { normalizeNumber } from "../utils/generic";
-import { Column, Relation } from "./types";
+import { Column, ModelFilters, Relation } from "./types";
 import fs from "fs/promises";
 import path from "path";
 
@@ -17,8 +17,8 @@ DB.registerConnectionConfig({
   user: process.env.DB_USER || "postgres",
   password: process.env.DB_PASSWORD || "postgres",
   database: process.env.DB_NAME || "postgres",
-  min: normalizeNumber(process.env.MIN_POOL_CONNECTIONS || 0),
-  max: normalizeNumber(process.env.MAX_POOL_CONNECTIONS || 10),
+  min: normalizeNumber(process.env.MIN_POOL_CONNECTIONS || 10),
+  max: normalizeNumber(process.env.MAX_POOL_CONNECTIONS || 100),
 });
 
 class BaseModel {
@@ -30,9 +30,11 @@ class BaseModel {
 
   modelFactory(columns: Column[], relations: Relation[]): any {
     const table = this.table;
-    return class mdlFacotry extends Model {
-      constructor(conn?: any) {
+    return class MdlFacotry extends Model {
+      registeredFilters?: ModelFilters;
+      constructor(conn?: any, filters?: ModelFilters) {
         super(table, conn);
+        this.registeredFilters = filters;
         this.columns = columns.reduce((acc, column) => {
           acc[column.name] = new DBColumn(column);
           return acc;
@@ -62,7 +64,9 @@ export async function getTableColumns(table: string): Promise<Column[]> {
     const { rows } = await DB.pool.query(EngineQueries.getTableColumns, [
       table,
     ]);
-    return (rows || []) as Column[];
+    return (rows || []).map((x: any) =>
+      x.type === "ARRAY" ? { ...x, type: `${x.mixed_column_type}[]` } : x
+    ) as Column[];
   } catch (error) {
     return [] as Column[];
   }

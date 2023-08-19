@@ -6,16 +6,46 @@ import { normalizeNumber } from "./utils/generic";
 import fastifySensible from "@fastify/sensible";
 import { registerZodSwagger } from "./swagger";
 import { dataRoutes } from "./modules/data";
+import { FastifyInstance } from "fastify";
+
+const fastifyPGEngine = async (
+  fastify: FastifyInstance,
+  opt: any,
+  next: any
+) => {
+  const {
+    disableApiHandlers = false,
+    apiPrefix = "api/v1",
+    modelsColumnFilters = {},
+  } = opt || {};
+
+  await Engine.init(modelsColumnFilters);
+  fastify.decorate("engine", Engine);
+  fastify.decorateRequest("model", null);
+  const { $ref, schemas } = await registerZodSwagger(fastify);
+  if (!disableApiHandlers) {
+    await fastify.register(dataRoutes({ $ref, schemas }), {
+      prefix: apiPrefix,
+    });
+  }
+  await next();
+};
 
 const start = async () => {
   try {
-    await Engine.init();
-    server.decorate("engine", Engine);
-    server.decorateRequest("model", null);
+    const options = {
+      modelsColumnFilters: {
+        products: {
+          id: (value: string) => ({
+            id: {
+              _eq: value,
+            },
+          }),
+        },
+      },
+    };
     await server.register(fastifySensible);
-    const { $ref, schemas } = await registerZodSwagger(server);
-    await server.register(dataRoutes({ $ref, schemas }), { prefix: "api/v1" });
-
+    await server.register(fastifyPGEngine, options);
     await server.listen({
       host: process.env.HOST,
       port: normalizeNumber(process.env.PORT),

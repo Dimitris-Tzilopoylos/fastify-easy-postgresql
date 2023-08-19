@@ -16,7 +16,10 @@ export function dataRoutes({
     Object.values(fastify.engine.apiRoutes).forEach((value) => {
       const model = value.model;
       const apiRoute = `/${toKebabCase(model.table)}`;
-      const preHandler = modelPreHandler(value.modelFactory);
+      const preHandler = modelPreHandler(
+        value.modelFactory,
+        value.modelFilters
+      );
 
       fastify.get(
         apiRoute,
@@ -24,6 +27,7 @@ export function dataRoutes({
           preHandler,
           schema: {
             tags: [toUpperCaseModelTitle(model.table)],
+            querystring: $ref(value.queryParamsSchemaName),
             response: {
               200: $ref(value.getResponseSchemaName),
             },
@@ -53,8 +57,8 @@ export function dataRoutes({
           preHandler,
           schema: {
             tags: [toUpperCaseModelTitle(model.table)],
+            querystring: $ref(value.queryParamsSchemaName),
             response: {
-              // 200: $ref(``)
               200: $ref(value.schemaName),
             },
           },
@@ -68,8 +72,8 @@ export function dataRoutes({
           preHandler,
           schema: {
             tags: [toUpperCaseModelTitle(model.table)],
+            querystring: $ref(value.queryParamsSchemaName),
             response: {
-              // 200: $ref(``)
               200: $ref(value.schemaName),
             },
           },

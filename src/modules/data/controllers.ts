@@ -1,9 +1,24 @@
 import { FastifyRequest, FastifyReply } from "fastify";
 import server from "../../app";
+import { aggregator } from "../../utils/aggregator";
+import { toWhereFiltersWithColumns } from "../../utils/filters";
 
 export async function get(req: FastifyRequest, reply: FastifyReply) {
-  const data = await req.model.find({ include: { category: true } });
-  reply.code(200).send(data);
+  const { page, view, ...where } = req.query as any;
+  reply.code(200).send(
+    await aggregator(
+      {
+        page,
+        view,
+        where: toWhereFiltersWithColumns(req.model.registeredFilters, where),
+      },
+      async (where) => {
+        const { count } = await req.model.aggregate({ _count: true, where });
+        return count as number;
+      },
+      ({ where, limit, offset }) => req.model.find({ where, limit, offset })
+    )
+  );
 }
 
 export async function post(req: FastifyRequest, reply: FastifyReply) {

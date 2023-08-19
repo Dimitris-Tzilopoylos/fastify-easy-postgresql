@@ -1,18 +1,19 @@
 import { FastifyRequest, FastifyReply } from "fastify";
-import { Model } from "easy-postgresql";
+
 import server from "./app";
+import { ModelFilters } from "./db/types";
 
 export function modelPreHandler(
-  modelFactory: any
+  modelFactory: any,
+  modelFilters?: ModelFilters
 ): (req: FastifyRequest, reply: FastifyReply, done: any) => Promise<void> {
   return async (req: FastifyRequest, reply: FastifyReply, done: any) => {
-    const model = new modelFactory();
+    const model = new modelFactory(null, modelFilters);
 
     if (!model) {
-      server.httpErrors.notFound();
+      throw server.httpErrors.notFound();
     } else {
       req.model = model;
-      done();
     }
   };
 }

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { array_relation, object_relation, schema } from "./constants";
 import { Model, Column } from "easy-postgresql";
 import { toSchemaRef } from "../utils/generic";
+import { ModelFilters } from "./types";
 
 export const relationSchema = z.object({
   alias: z.string(),
@@ -92,10 +93,46 @@ export const buildModelSchema = (model: Model) => {
   };
 };
 
-export const buildModelGetResponseSchema = (model: Model) => {
+export const buildInitialModelQueryParamsSchema = (model: Model) => {
+  return z.object({
+    page: z.number().min(1).optional().default(1),
+    view: z.number().min(0).optional(),
+    ...Object.entries(model.columns).reduce((acc, [key, value]: any) => {
+      acc[key] = columnToZodType(value).optional();
+      return acc;
+    }, {} as any),
+  });
+};
+
+export const buildModelQueryParamsSchema = (
+  model: Model,
+  modelFilters: ModelFilters
+) => {
+  const initialFiltersSchema = buildInitialModelQueryParamsSchema(model);
+  const _iter = Object.entries(modelFilters);
+  const schemaName = toSchemaRef(model.table, "QueryParams");
+  if (!_iter.length) {
+    return { [schemaName]: initialFiltersSchema };
+  }
   return {
-    [toSchemaRef(model.table, "Response")]: z.array(
-      buildModelSchema(model)[toSchemaRef(model.table)]
+    [schemaName]: initialFiltersSchema.extend(
+      _iter.reduce((acc, [key]) => {
+        acc[key] = z.any().optional();
+      }, {} as any)
     ),
+  };
+};
+
+export const buildModelGetResponseSchema = (model: Model, modelSchema: any) => {
+  return {
+    [toSchemaRef(model.table, "Response")]: z.object({
+      page: z.number(),
+      view: z.number(),
+      total: z.number(),
+      limit: z.number(),
+      skip: z.number(),
+      per_page: z.number(),
+      results: z.array(modelSchema.optional()),
+    }),
   };
 };
