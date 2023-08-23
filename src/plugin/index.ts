@@ -1,12 +1,12 @@
 import { FastifyInstance } from "fastify";
 import server from "../app";
-import Engine from "../db/engine";
+import Engine from "../pg-engine/engine";
 import fastifySensible from "@fastify/sensible";
 import { registerZodSwagger } from "../swagger";
 import { authRoutes } from "../modules/auth";
 import { dataRoutes } from "../modules/data";
-import GraphQL from "../db/graphql";
-import { PGEngineOptions } from "../db/types";
+import GraphQL from "../pg-engine/graphql";
+import { PGEngineOptions } from "../pg-engine/types";
 
 const fastifyPGEngine = async (
   fastify: FastifyInstance,

@@ -4,7 +4,7 @@ import {
   refreshTokenResponseSchema,
   refreshTokenSchema,
   registerResponseSchema,
-} from "../../db/schema";
+} from "../../pg-engine/schema";
 
 export type AuthHeaders = { authorization?: string };
 

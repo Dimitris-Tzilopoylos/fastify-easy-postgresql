@@ -1,5 +1,5 @@
 import { FastifyReply, FastifyRequest } from "fastify";
-import { EngineAuthConfig } from "../../db/types";
+import { EngineAuthConfig } from "../../pg-engine/types";
 import { authorize } from "./utils";
 import server from "../../app";
 

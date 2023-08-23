@@ -1,7 +1,7 @@
 import { FastifyRequest, FastifyReply } from "fastify";
 
 import server from "../../app";
-import { EngineAuthConfig, ModelFilters } from "../../db/types";
+import { EngineAuthConfig, ModelFilters } from "../../pg-engine/types";
 import { authPrehandler } from "../auth/authPrehandler";
 
 export function modelPreHandler(

@@ -1,5 +1,5 @@
 import { FastifyReply, FastifyRequest } from "fastify";
-import { EngineAuthConfig } from "../../db/types";
+import { EngineAuthConfig } from "../../pg-engine/types";
 import server from "../../app";
 import bcrypt from "bcryptjs";
 import { authorize, getLoginConfigWithDefaults, signTokens } from "./utils";

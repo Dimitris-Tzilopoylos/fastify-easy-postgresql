@@ -1,7 +1,7 @@
 import fastify, { FastifyInstance as BaseFastifyInstance } from "fastify";
 import { Model } from "easy-postgresql";
-import Engine from "./db/engine";
-import { ModelFilters } from "./db/types";
+import Engine from "./pg-engine/engine";
+import { ModelFilters } from "./pg-engine/types";
 
 interface FastifyEnhancedInstance {
   engine: typeof Engine;

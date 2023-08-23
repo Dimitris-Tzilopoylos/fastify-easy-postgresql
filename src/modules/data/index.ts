@@ -3,7 +3,7 @@ import { modelPreHandler } from "./modelPrehandler";
 import { get, post, put, remove } from "./controllers";
 import { toKebabCase, toUpperCaseModelTitle } from "../../utils/generic";
 import { $Ref, JsonSchema } from "fastify-zod/build/JsonSchema";
-import { EngineApiRoute } from "../../db/types";
+import { EngineApiRoute } from "../../pg-engine/types";
 
 export function dataRoutes({
   $ref,

@@ -1,5 +1,5 @@
 import { FastifyRequest } from "fastify";
-import { EngineAuthConfig } from "../../db/types";
+import { EngineAuthConfig } from "../../pg-engine/types";
 import jwt from "jsonwebtoken";
 
 export const signAccessToken = (payload: any, opt: EngineAuthConfig) => {
