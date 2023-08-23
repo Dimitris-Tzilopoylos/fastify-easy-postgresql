@@ -5,7 +5,6 @@ import { ModelFilters } from "./pg-engine/types";
 
 interface FastifyEnhancedInstance {
   engine: typeof Engine;
-  // Add other custom properties if needed
 }
 
 export interface FastifyEnhancedRequest {
