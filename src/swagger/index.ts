@@ -4,29 +4,30 @@ import { FastifyInstance } from "fastify";
 export const registerZodSwagger = async (server: FastifyInstance) => {
   const jsonSchemas = server.engine.buildZodSchemas();
   const { $ref, schemas } = jsonSchemas;
-
-  await register(server, {
-    jsonSchemas,
-    swaggerUiOptions: {
-      routePrefix: "/api/v1/swagger",
-      staticCSP: true,
-      theme: {
-        title: "Engine API",
-      },
-    },
-    swaggerOptions: withRefResolver({
-      openapi: {
-        info: {
-          title: "Engine API",
-          description: "Engine API",
-          version: "1",
-          contact: {
-            email: "dimtzilop@iti.gr",
-            name: "Dimitris Tzilopoylos",
+  const swaggerConfig = !!server.engine.swaggerOptions.enabled
+    ? {
+        swaggerUiOptions: {
+          routePrefix: server.engine.swaggerOptions?.endpoint,
+          staticCSP: true,
+          theme: {
+            title: server.engine.swaggerOptions?.title,
           },
         },
-      },
-    }),
+        swaggerOptions: withRefResolver({
+          openapi: {
+            info: {
+              title: server.engine.swaggerOptions?.title || "ENGINE API",
+              description: server.engine.swaggerOptions?.description,
+              version: server.engine.swaggerOptions?.version || "1",
+              contact: server.engine.swaggerOptions?.contact,
+            },
+          },
+        }),
+      }
+    : {};
+  await register(server, {
+    jsonSchemas,
+    ...swaggerConfig,
   });
 
   return { $ref, schemas };

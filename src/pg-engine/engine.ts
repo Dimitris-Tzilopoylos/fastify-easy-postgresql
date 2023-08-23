@@ -26,6 +26,7 @@ import {
 import {
   EngineApiRoute,
   EngineAuthConfig,
+  EngineSwaggerOptions,
   HttpVerbKey,
   ModelFilters,
 } from "./types";
@@ -54,7 +55,7 @@ export default class Engine {
     },
   };
   static modelColumnFilters: Record<string, ModelFilters> = {};
-
+  static swaggerOptions: EngineSwaggerOptions;
   static async init({
     modelOptions,
     authConfig,

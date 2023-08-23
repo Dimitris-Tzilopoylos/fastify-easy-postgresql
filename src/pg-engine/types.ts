@@ -76,7 +76,22 @@ export type EngineApiRoute = {
   effects?: Record<string, Promise<void>>;
 };
 
+export type EngineSwaggerOptions = {
+  endpoint: string;
+  enabled?: boolean;
+  description?: string;
+  title?: string;
+  version?: string;
+  contact?: {
+    email?: string;
+    name?: string;
+  };
+};
+
 export type PGEngineOptions = {
+  disableApiHandlers?: boolean;
+  apiPrefix?: string;
+  swaggerConfig?: EngineSwaggerOptions;
   authOptions?: EngineAuthConfig;
   modelOptions?: Record<
     string,

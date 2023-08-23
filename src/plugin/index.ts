@@ -10,7 +10,7 @@ import { PGEngineOptions } from "../pg-engine/types";
 
 const fastifyPGEngine = async (
   fastify: FastifyInstance,
-  opt: any,
+  opt: PGEngineOptions,
   next: any
 ) => {
   const {
@@ -19,7 +19,12 @@ const fastifyPGEngine = async (
     authOptions,
     modelOptions = {},
     graphql = false,
+    swaggerConfig,
   } = opt || {};
+  if (swaggerConfig) {
+    Engine.swaggerOptions = swaggerConfig;
+  }
+
   await server.register(fastifySensible);
   await Engine.init({ modelOptions, authConfig: authOptions });
   fastify.decorate("engine", Engine);

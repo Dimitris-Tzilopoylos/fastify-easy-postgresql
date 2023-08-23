@@ -7,6 +7,12 @@ import registerEngine from "./plugin";
 const start = async () => {
   try {
     await registerEngine(server, {
+      swaggerConfig: {
+        enabled: process.env.NODE_ENV !== "production",
+        endpoint: "/api/v1/swagger",
+        title: "Engine API",
+        description: "My API",
+      },
       authOptions: {
         url: "/auth",
         table: "users",
