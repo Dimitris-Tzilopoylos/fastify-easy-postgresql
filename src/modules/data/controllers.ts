@@ -12,6 +12,7 @@ export const get = (opt: any) =>
       reply.code(200).send(
         await req.model.find({
           where: toWhereFiltersWithColumns(req.model.registeredFilters, where),
+          ...(opt.include && { include: opt.include(req, req.user) }),
         })
       );
     } else {
@@ -32,7 +33,13 @@ export const get = (opt: any) =>
             });
             return count as number;
           },
-          ({ where, limit, offset }) => req.model.find({ where, limit, offset })
+          ({ where, limit, offset }) =>
+            req.model.find({
+              where,
+              limit,
+              offset,
+              ...(opt.include && { include: opt.include(req, req.user) }),
+            })
         )
       );
     }

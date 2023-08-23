@@ -90,7 +90,10 @@ export function dataRoutes({
             },
           },
         },
-        get({ pagination: value.pagination })
+        get({
+          pagination: value.pagination,
+          include: value.httpHandlers?.get?.include,
+        })
       );
 
       fastify.post(

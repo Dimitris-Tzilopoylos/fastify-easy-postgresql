@@ -2,12 +2,11 @@ import dotenv from "dotenv";
 dotenv.config();
 import server from "./app";
 import { normalizeNumber } from "./utils/generic";
-import fastifyPGEngine from "./plugin";
-import { PGEngineOptions } from "./db/types";
+import registerEngine from "./plugin";
 
 const start = async () => {
   try {
-    const options: PGEngineOptions = {
+    await registerEngine(server, {
       authOptions: {
         url: "/auth",
         table: "users",
@@ -20,7 +19,7 @@ const start = async () => {
         },
       },
       modelOptions: {
-        users: {
+        products: {
           filters: {
             from_name: (value: string) => ({
               name: {
@@ -28,21 +27,20 @@ const start = async () => {
               },
             }),
           },
-          pagination: false,
+          pagination: true,
           httpHandlers: {
             get: {
               auth: false,
               canAccess: async (user: any) => user?.role?.name === "superadmin",
+              include: (req, user) => ({
+                category: { where: { name: { _eq: "jk" } } },
+              }),
             },
-          },
-          effects: {
-            onSelectAsync: async (data: any, instance: any) => {},
           },
         },
       },
       graphql: false,
-    };
-    await server.register(fastifyPGEngine, options);
+    });
     await server.listen({
       host: process.env.HOST,
       port: normalizeNumber(process.env.PORT),

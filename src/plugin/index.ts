@@ -6,6 +6,7 @@ import { registerZodSwagger } from "../swagger";
 import { authRoutes } from "../modules/auth";
 import { dataRoutes } from "../modules/data";
 import GraphQL from "../db/graphql";
+import { PGEngineOptions } from "../db/types";
 
 const fastifyPGEngine = async (
   fastify: FastifyInstance,
@@ -47,4 +48,11 @@ const fastifyPGEngine = async (
   await next();
 };
 
-export default fastifyPGEngine;
+const registerEngine = async (
+  server: FastifyInstance,
+  options: PGEngineOptions
+) => {
+  await server.register(fastifyPGEngine, options);
+};
+
+export default registerEngine;

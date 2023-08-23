@@ -2,6 +2,7 @@ import { z } from "zod";
 import { columnSchema, dbTableSchema, relationSchema } from "./schema";
 import { Model } from "easy-postgresql";
 import jwt from "jsonwebtoken";
+import { FastifyRequest } from "fastify";
 
 export type Relation = z.infer<typeof relationSchema>;
 export type Column = z.infer<typeof columnSchema>;
@@ -18,10 +19,13 @@ export type BaseModelHttpHandlerConfig = {
   canAccess?: (user: any) => Promise<boolean>;
   queryParamsFormatter?: (value: any, user: any) => any;
   paramsFormatter?: (value: any, user: any) => any;
+  responseFormatter?: (data: any, user: any) => any;
 };
 
 export type ModelHttpHandlers = {
-  get?: BaseModelHttpHandlerConfig;
+  get?: BaseModelHttpHandlerConfig & {
+    include?: (req: FastifyRequest<any>, user: any) => any;
+  };
   post?: BaseModelHttpHandlerConfig & {
     bodyFormatter: (value: any, user: any) => any;
   };

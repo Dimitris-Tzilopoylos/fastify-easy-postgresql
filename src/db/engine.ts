@@ -233,8 +233,10 @@ export default class Engine {
           return {
             [relation.alias]:
               relation.type === array_relation
-                ? z.array(zodSchema.optional()).optional()
-                : zodSchema.optional(),
+                ? z
+                    .union([z.array(zodSchema.optional()).optional(), z.null()])
+                    .optional()
+                : z.union([zodSchema.optional(), z.null()]).optional(),
           };
         })
         .filter(Boolean);
@@ -266,8 +268,10 @@ export default class Engine {
           return {
             [relation.alias]:
               relation.type === array_relation
-                ? z.array(zodSchema.optional()).optional()
-                : zodSchema.optional(),
+                ? z
+                    .union([z.array(zodSchema.optional()).optional(), z.null()])
+                    .optional()
+                : z.union([zodSchema.optional(), z.null()]).optional(),
           };
         })
         .filter(Boolean);
