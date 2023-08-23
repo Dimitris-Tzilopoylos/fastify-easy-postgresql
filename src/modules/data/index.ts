@@ -1,49 +1,106 @@
-import { Model } from "easy-postgresql";
 import { FastifyInstance } from "fastify";
-import { modelPreHandler } from "../../modelPrehandler";
+import { modelPreHandler } from "./modelPrehandler";
 import { get, post, put, remove } from "./controllers";
 import { toKebabCase, toUpperCaseModelTitle } from "../../utils/generic";
 import { $Ref, JsonSchema } from "fastify-zod/build/JsonSchema";
+import { EngineApiRoute } from "../../db/types";
 
 export function dataRoutes({
   $ref,
-  schemas,
 }: {
   $ref: $Ref<any>;
   schemas: JsonSchema[];
 }) {
   return async (fastify: FastifyInstance) => {
-    Object.values(fastify.engine.apiRoutes).forEach((value) => {
+    Object.values(fastify.engine.apiRoutes).forEach((value: EngineApiRoute) => {
       const model = value.model;
       const apiRoute = `/${toKebabCase(model.table)}`;
-      const preHandler = modelPreHandler(
+
+      const getHeaders = fastify.engine.modelHasEnabledAuthForMethod(
+        "get",
+        value
+      )
+        ? { headers: $ref("authSchema") }
+        : {};
+      const postHeaders = fastify.engine.modelHasEnabledAuthForMethod(
+        "post",
+        value
+      )
+        ? { headers: $ref("authSchema") }
+        : {};
+      const putHeaders = fastify.engine.modelHasEnabledAuthForMethod(
+        "put",
+        value
+      )
+        ? { headers: $ref("authSchema") }
+        : {};
+      const deleteHeaders = fastify.engine.modelHasEnabledAuthForMethod(
+        "delete",
+        value
+      )
+        ? { headers: $ref("authSchema") }
+        : {};
+
+      const getPreHandler = modelPreHandler(
         value.modelFactory,
-        value.modelFilters
+        value.modelFilters,
+        fastify.engine.modelHasEnabledAuthForMethod("get", value),
+        fastify.engine.getModelAuthAccessFunction("get", value),
+        fastify.engine.authModel,
+        fastify.engine.authConfig
+      );
+
+      const postPreHandler = modelPreHandler(
+        value.modelFactory,
+        value.modelFilters,
+        fastify.engine.modelHasEnabledAuthForMethod("post", value),
+        fastify.engine.getModelAuthAccessFunction("post", value),
+        fastify.engine.authModel,
+        fastify.engine.authConfig
+      );
+
+      const putPreHandler = modelPreHandler(
+        value.modelFactory,
+        value.modelFilters,
+        fastify.engine.modelHasEnabledAuthForMethod("put", value),
+        fastify.engine.getModelAuthAccessFunction("put", value),
+        fastify.engine.authModel,
+        fastify.engine.authConfig
+      );
+
+      const removePreHandler = modelPreHandler(
+        value.modelFactory,
+        value.modelFilters,
+        fastify.engine.modelHasEnabledAuthForMethod("delete", value),
+        fastify.engine.getModelAuthAccessFunction("delete", value),
+        fastify.engine.authModel,
+        fastify.engine.authConfig
       );
 
       fastify.get(
         apiRoute,
         {
-          preHandler,
+          preHandler: getPreHandler,
           schema: {
             tags: [toUpperCaseModelTitle(model.table)],
             querystring: $ref(value.queryParamsSchemaName),
+            ...getHeaders,
             response: {
               200: $ref(value.getResponseSchemaName),
             },
           },
         },
-        get
+        get({ pagination: value.pagination })
       );
 
       fastify.post(
         apiRoute,
         {
-          preHandler,
+          preHandler: postPreHandler,
           schema: {
             tags: [toUpperCaseModelTitle(model.table)],
+            ...postHeaders,
             response: {
-              // 200: $ref(``)
               201: $ref(value.schemaName),
             },
           },
@@ -54,12 +111,13 @@ export function dataRoutes({
       fastify.put(
         apiRoute,
         {
-          preHandler,
+          preHandler: putPreHandler,
           schema: {
             tags: [toUpperCaseModelTitle(model.table)],
             querystring: $ref(value.queryParamsSchemaName),
+            ...putHeaders,
             response: {
-              200: $ref(value.schemaName),
+              200: $ref(value.statementResponseSchemaName),
             },
           },
         },
@@ -69,12 +127,13 @@ export function dataRoutes({
       fastify.delete(
         apiRoute,
         {
-          preHandler,
+          preHandler: removePreHandler,
           schema: {
             tags: [toUpperCaseModelTitle(model.table)],
             querystring: $ref(value.queryParamsSchemaName),
+            ...deleteHeaders,
             response: {
-              200: $ref(value.schemaName),
+              200: $ref(value.statementResponseSchemaName),
             },
           },
         },

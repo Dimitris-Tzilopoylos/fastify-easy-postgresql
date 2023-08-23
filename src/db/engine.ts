@@ -2,37 +2,84 @@ import { DB, Model } from "easy-postgresql";
 import { init } from ".";
 import { toKebabCase, toSchemaRef } from "../utils/generic";
 import {
+  authSchema,
+  registerResponseSchema,
+  forgotPasswordBodySchema,
+  loginResponseSchema,
+  refreshTokenResponseSchema,
+  refreshTokenSchema,
   buildModelGetResponseSchema,
   buildModelQueryParamsSchema,
   buildModelSchema,
+  buildModelStatementResponseSchema,
+  buildLoginRequestBodySchema,
+  buildRegisterRequestBodySchema,
 } from "./schema";
 import { buildJsonSchemas } from "fastify-zod";
 import { z } from "zod";
-import { array_relation } from "./constants";
-import { ModelFilters } from "./types";
+import {
+  QueryParamsSchemaLEX,
+  ResponseSchemaLEX,
+  StatementResponseSchemaLEX,
+  array_relation,
+} from "./constants";
+import {
+  EngineApiRoute,
+  EngineAuthConfig,
+  HttpVerbKey,
+  ModelFilters,
+} from "./types";
 
 export default class Engine {
   static db: typeof DB;
   static schemas: any = {};
-  static apiRoutes: {
-    [key: string]: {
-      model: Model;
-      modelFactory: typeof Model;
-      modelZodSchema: any;
-      modelGetResponseZodSchema: any;
-      modelZodQueryParamsSchema: any;
-      schemaName: string;
-      getResponseSchemaName: string;
-      queryParamsSchemaName: string;
-      modelFilters: ModelFilters;
-    };
-  } = {};
-
+  static apiRoutes: Record<string, EngineApiRoute> = {};
+  static authModel: Model;
+  static authConfig: EngineAuthConfig = {
+    table: "users",
+    primaryKeys: ["id"],
+    accessTokenConfig: {
+      expiresIn: "15m",
+      secret: "access_token_secret",
+    },
+    refreshTokenConfig: {
+      expiresIn: "1d",
+      secret: "refresh_token_secret",
+    },
+    loginConfig: {
+      identityField: "email",
+      credentialsField: "password",
+      include: {},
+      shouldLogin: async (value: any) => true,
+    },
+  };
   static modelColumnFilters: Record<string, ModelFilters> = {};
 
-  static async init(filters: Record<string, ModelFilters>) {
-    Engine.modelColumnFilters = filters || {};
+  static async init({
+    modelOptions,
+    authConfig,
+  }: {
+    modelOptions: any;
+    authConfig?: EngineAuthConfig;
+  }) {
     Engine.db = await init();
+
+    Engine.authConfig = {
+      ...Engine.authConfig,
+      ...(authConfig || {}),
+    };
+
+    Engine.authModel = (Engine.db.modelFactory as any)?.[
+      Engine.authConfig?.table
+    ];
+
+    Engine.modelColumnFilters = Object.entries(modelOptions || {}).reduce(
+      (acc, [key, value]: any) => {
+        acc[key] = value.filters || {};
+        return acc;
+      },
+      {} as Record<string, ModelFilters>
+    );
     Engine.buildAllModelZodSchemas();
 
     Object.entries(Engine.db.models).forEach(([key, model]: any[]) => {
@@ -45,7 +92,14 @@ export default class Engine {
       }
       const modelZodSchema =
         Engine.schemas[model.table][toSchemaRef(model.table)];
+      const currentModelOptions = modelOptions?.[model.table] || {};
       const modelFilters = Engine.modelColumnFilters?.[model.table] || {};
+      const { httpHandlers } = currentModelOptions || {};
+      const pagination =
+        typeof currentModelOptions.pagination === "undefined"
+          ? true
+          : !!currentModelOptions.pagination;
+      const modelEffects = currentModelOptions.effects || {};
       Engine.apiRoutes[apiRoute] = {
         model: model as Model,
         modelFactory: (Engine.db.modelFactory as any)[
@@ -58,13 +112,64 @@ export default class Engine {
         ),
         modelGetResponseZodSchema: buildModelGetResponseSchema(
           model,
+          modelZodSchema,
+          currentModelOptions
+        ),
+        modelStatementResponseZodSchema: buildModelStatementResponseSchema(
+          model,
           modelZodSchema
         ),
         schemaName: toSchemaRef(model.table),
-        getResponseSchemaName: toSchemaRef(model.table, "Response"),
-        queryParamsSchemaName: toSchemaRef(model.table, "QueryParams"),
+        getResponseSchemaName: toSchemaRef(model.table, ResponseSchemaLEX),
+        queryParamsSchemaName: toSchemaRef(model.table, QueryParamsSchemaLEX),
+        statementResponseSchemaName: toSchemaRef(
+          model.table,
+          StatementResponseSchemaLEX
+        ),
         modelFilters,
+        pagination,
+        httpHandlers,
+        effects: modelEffects,
       };
+
+      Object.entries(modelEffects as Record<any, Promise<void>>).forEach(
+        ([type, exec]) => {
+          switch (type) {
+            case "onInsert":
+              Engine.db.onInsert(model.table, exec);
+              break;
+            case "onInsertAsync":
+              Engine.db.onInsertAsync(model.table, exec);
+              break;
+            case "onUpdate":
+              Engine.db.onUpdate(model.table, exec);
+              break;
+            case "onUpdateAsync":
+              Engine.db.onUpdateAsync(model.table, exec);
+              break;
+            case "onSelect":
+              Engine.db.onSelect(model.table, exec);
+              break;
+            case "onSelectAsync":
+              Engine.db.onSelectAsync(model.table, exec);
+              break;
+            case "onDelete":
+              Engine.db.onDelete(model.table, exec);
+              break;
+            case "onInsertAsync":
+              Engine.db.onDeleteAsync(model.table, exec);
+              break;
+            case "onError":
+              Engine.db.onError(model.table, exec);
+              break;
+            case "onErrorAsync":
+              Engine.db.onErrorAsync(model.table, exec);
+              break;
+            default:
+              break;
+          }
+        }
+      );
     });
   }
 
@@ -77,6 +182,8 @@ export default class Engine {
             modelZodSchema,
             modelGetResponseZodSchema,
             modelZodQueryParamsSchema,
+            modelStatementResponseZodSchema,
+            model,
           }
         ) => {
           return {
@@ -84,9 +191,21 @@ export default class Engine {
             ...modelZodSchema,
             ...modelGetResponseZodSchema,
             ...modelZodQueryParamsSchema,
+            ...modelStatementResponseZodSchema,
+            ...(model.table === Engine.authConfig.table &&
+              buildLoginRequestBodySchema(model, Engine.authConfig)),
+            ...(model.table === Engine.authConfig.table &&
+              buildRegisterRequestBodySchema(model, Engine.authConfig)),
           };
         },
-        {}
+        {
+          authSchema,
+          registerResponseSchema,
+          forgotPasswordBodySchema,
+          loginResponseSchema,
+          refreshTokenResponseSchema,
+          refreshTokenSchema,
+        }
       )
     );
   }
@@ -119,6 +238,7 @@ export default class Engine {
           };
         })
         .filter(Boolean);
+
       if (extendedSchemas.length) {
         Engine.schemas[model.table][toSchemaRef(model.table)] = Engine.schemas[
           model.table
@@ -162,5 +282,19 @@ export default class Engine {
         );
       }
     });
+  }
+
+  static modelHasEnabledAuthForMethod(
+    method: HttpVerbKey,
+    config: EngineApiRoute
+  ) {
+    return !!config.httpHandlers?.[method]?.auth;
+  }
+
+  static getModelAuthAccessFunction(
+    method: HttpVerbKey,
+    config: EngineApiRoute
+  ) {
+    return config?.httpHandlers?.[method]?.canAccess;
   }
 }

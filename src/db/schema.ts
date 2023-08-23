@@ -1,8 +1,15 @@
 import { z } from "zod";
-import { array_relation, object_relation, schema } from "./constants";
+import {
+  QueryParamsSchemaLEX,
+  ResponseSchemaLEX,
+  StatementResponseSchemaLEX,
+  array_relation,
+  object_relation,
+  schema,
+} from "./constants";
 import { Model, Column } from "easy-postgresql";
 import { toSchemaRef } from "../utils/generic";
-import { ModelFilters } from "./types";
+import { EngineAuthConfig, ModelFilters } from "./types";
 
 export const relationSchema = z.object({
   alias: z.string(),
@@ -35,6 +42,36 @@ export const dbTableSchema = z.object({
   relations: z.record(z.string(), relationSchema).optional(),
 });
 
+export const authSchema = z.object({
+  authorization: z
+    .string()
+    .refine(
+      (value) => value.startsWith("Bearer ") && value.length > `Bearer `.length
+    ),
+});
+
+export const refreshTokenResponseSchema = z.object({
+  access_token: z.string(),
+  refresh_token: z.string(),
+});
+
+export const refreshTokenSchema = z.object({
+  refresh_token: z.string().min(4),
+});
+
+export const registerResponseSchema = z.object({
+  message: z.string(),
+});
+
+export const loginResponseSchema = z.object({
+  access_token: z.string(),
+  refresh_token: z.string(),
+});
+
+export const forgotPasswordBodySchema = z.object({
+  email: z.string().trim().email(),
+});
+
 const columnToZodType = (column: Column) => {
   let chain: any = z;
   let isArray = false;
@@ -49,7 +86,11 @@ const columnToZodType = (column: Column) => {
     column.type.startsWith("decimal") ||
     column.type.startsWith("float") ||
     column.type.startsWith("double") ||
-    column.type.startsWith("money")
+    column.type.startsWith("money") ||
+    column.type.startsWith("serial") ||
+    column.type.startsWith("bigserial") ||
+    column.type.startsWith("bigint") ||
+    column.type.startsWith("real")
   ) {
     chain = z.number();
   } else if (
@@ -110,7 +151,7 @@ export const buildModelQueryParamsSchema = (
 ) => {
   const initialFiltersSchema = buildInitialModelQueryParamsSchema(model);
   const _iter = Object.entries(modelFilters);
-  const schemaName = toSchemaRef(model.table, "QueryParams");
+  const schemaName = toSchemaRef(model.table, QueryParamsSchemaLEX);
   if (!_iter.length) {
     return { [schemaName]: initialFiltersSchema };
   }
@@ -118,14 +159,27 @@ export const buildModelQueryParamsSchema = (
     [schemaName]: initialFiltersSchema.extend(
       _iter.reduce((acc, [key]) => {
         acc[key] = z.any().optional();
+        return acc;
       }, {} as any)
     ),
   };
 };
 
-export const buildModelGetResponseSchema = (model: Model, modelSchema: any) => {
+export const buildModelGetResponseSchema = (
+  model: Model,
+  modelSchema: any,
+  opt?: any
+) => {
+  const { pagination = true } = opt || {};
+  if (!pagination) {
+    return {
+      [toSchemaRef(model.table, ResponseSchemaLEX)]: z.array(
+        modelSchema.optional()
+      ),
+    };
+  }
   return {
-    [toSchemaRef(model.table, "Response")]: z.object({
+    [toSchemaRef(model.table, ResponseSchemaLEX)]: z.object({
       page: z.number(),
       view: z.number(),
       total: z.number(),
@@ -134,5 +188,66 @@ export const buildModelGetResponseSchema = (model: Model, modelSchema: any) => {
       per_page: z.number(),
       results: z.array(modelSchema.optional()),
     }),
+  };
+};
+
+export const buildModelStatementResponseSchema = (
+  model: Model,
+  modelSchema: any
+) => {
+  return {
+    [toSchemaRef(model.table, StatementResponseSchemaLEX)]: z.array(
+      modelSchema.optional()
+    ),
+  };
+};
+
+export const buildLoginRequestBodySchema = (
+  model: Model,
+  authConfig: EngineAuthConfig
+) => {
+  if (!authConfig.loginConfig) {
+    return {};
+  }
+
+  const identityColumn = (model.columns as any)?.[
+    authConfig.loginConfig.identityField
+  ];
+
+  const credentialsColumn = (model.columns as any)?.[
+    authConfig.loginConfig.credentialsField
+  ];
+
+  if (!identityColumn) {
+    return {};
+  }
+  if (!credentialsColumn) {
+    return {};
+  }
+
+  return {
+    loginRequestBodySchema: z.object({
+      [authConfig.loginConfig.identityField]: columnToZodType(identityColumn),
+      [authConfig.loginConfig.credentialsField]:
+        columnToZodType(credentialsColumn),
+    }),
+  };
+};
+
+export const buildRegisterRequestBodySchema = (
+  model: Model,
+  authConfig: EngineAuthConfig
+) => {
+  return {
+    registerRequestBodySchema: z.object(
+      Object.values(model.columns).reduce((acc: any, column: any) => {
+        const { primaryKeys = [] } = authConfig;
+        if (primaryKeys?.indexOf(column.column) !== -1) {
+          return acc;
+        }
+        acc[column.column] = columnToZodType(column);
+        return acc;
+      }, {} as any) as any
+    ),
   };
 };

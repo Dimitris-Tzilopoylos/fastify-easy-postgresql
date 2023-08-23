@@ -1,50 +1,47 @@
 import dotenv from "dotenv";
 dotenv.config();
 import server from "./app";
-import Engine from "./db/engine";
 import { normalizeNumber } from "./utils/generic";
-import fastifySensible from "@fastify/sensible";
-import { registerZodSwagger } from "./swagger";
-import { dataRoutes } from "./modules/data";
-import { FastifyInstance } from "fastify";
-
-const fastifyPGEngine = async (
-  fastify: FastifyInstance,
-  opt: any,
-  next: any
-) => {
-  const {
-    disableApiHandlers = false,
-    apiPrefix = "api/v1",
-    modelsColumnFilters = {},
-  } = opt || {};
-
-  await Engine.init(modelsColumnFilters);
-  fastify.decorate("engine", Engine);
-  fastify.decorateRequest("model", null);
-  const { $ref, schemas } = await registerZodSwagger(fastify);
-  if (!disableApiHandlers) {
-    await fastify.register(dataRoutes({ $ref, schemas }), {
-      prefix: apiPrefix,
-    });
-  }
-  await next();
-};
+import fastifyPGEngine from "./plugin";
+import { PGEngineOptions } from "./db/types";
 
 const start = async () => {
   try {
-    const options = {
-      modelsColumnFilters: {
-        products: {
-          id: (value: string) => ({
-            id: {
-              _eq: value,
-            },
-          }),
+    const options: PGEngineOptions = {
+      authOptions: {
+        url: "/auth",
+        table: "users",
+        primaryKeys: ["id"],
+        loginConfig: {
+          identityField: "email",
+          credentialsField: "password",
+          include: { role: true },
+          shouldLogin: async (user: any) => !!user?.verified,
         },
       },
+      modelOptions: {
+        users: {
+          filters: {
+            from_name: (value: string) => ({
+              name: {
+                _ilike: value,
+              },
+            }),
+          },
+          pagination: false,
+          httpHandlers: {
+            get: {
+              auth: false,
+              canAccess: async (user: any) => user?.role?.name === "superadmin",
+            },
+          },
+          effects: {
+            onSelectAsync: async (data: any, instance: any) => {},
+          },
+        },
+      },
+      graphql: false,
     };
-    await server.register(fastifySensible);
     await server.register(fastifyPGEngine, options);
     await server.listen({
       host: process.env.HOST,

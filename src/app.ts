@@ -10,17 +10,11 @@ interface FastifyEnhancedInstance {
 
 export interface FastifyEnhancedRequest {
   model: Model & { registeredFilters?: ModelFilters };
+  user?: any;
 }
 
 export interface FastifyRequestWithModel extends FastifyEnhancedRequest {
   model: Model;
-}
-
-export interface FastifyPGEngineOptions {
-  disableApiHandlers?: boolean;
-  modelsColumnFilters?: Record<string, ModelFilters>;
-  apiPrefix?: string;
-  useAuth?: boolean | Record<"get" | "post" | "put" | "delete", boolean>;
 }
 
 declare module "fastify" {

@@ -1,4 +1,14 @@
 {
+  "users": [
+    {
+      "from_table": "users",
+      "from_column": "role_id",
+      "to_table": "roles",
+      "to_column": "id",
+      "type": "object",
+      "alias": "roles"
+    }
+  ],
   "products": [
     {
       "from_table": "products",
