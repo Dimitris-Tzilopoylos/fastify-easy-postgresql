@@ -93,6 +93,7 @@ export function dataRoutes({
         get({
           pagination: value.pagination,
           include: value.httpHandlers?.get?.include,
+          responseFormatter: value.httpHandlers?.get?.responseFormatter,
         })
       );
 
@@ -108,7 +109,9 @@ export function dataRoutes({
             },
           },
         },
-        post
+        post({
+          responseFormatter: value.httpHandlers?.post?.responseFormatter,
+        })
       );
 
       fastify.put(
@@ -124,7 +127,9 @@ export function dataRoutes({
             },
           },
         },
-        put
+        put({
+          responseFormatter: value.httpHandlers?.put?.responseFormatter,
+        })
       );
 
       fastify.delete(
@@ -140,7 +145,9 @@ export function dataRoutes({
             },
           },
         },
-        remove
+        remove({
+          responseFormatter: value.httpHandlers?.delete?.responseFormatter,
+        })
       );
     });
   };

@@ -27,7 +27,7 @@ const start = async () => {
               },
             }),
           },
-          pagination: true,
+          pagination: false,
           httpHandlers: {
             get: {
               auth: false,

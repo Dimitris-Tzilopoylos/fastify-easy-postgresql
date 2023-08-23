@@ -37,3 +37,22 @@ export const aggregator = async (
     };
   }
 };
+
+export const withSimpleResponseFormatter = (data: any, user: any, opt: any) => {
+  if (!opt?.responseFormatter) {
+    return data;
+  }
+  return opt.responseFormatter(data, user);
+};
+
+export const withResponseFormatter = async (
+  promise: any,
+  user: any,
+  opt: any
+) => {
+  if (!opt?.responseFormatter) {
+    return await promise;
+  }
+
+  return opt.responseFormatter(await promise, user);
+};

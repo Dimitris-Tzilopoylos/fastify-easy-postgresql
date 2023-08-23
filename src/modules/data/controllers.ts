@@ -1,6 +1,10 @@
 import { FastifyRequest, FastifyReply } from "fastify";
 import server from "../../app";
-import { aggregator } from "../../utils/aggregator";
+import {
+  aggregator,
+  withResponseFormatter,
+  withSimpleResponseFormatter,
+} from "../../utils/aggregator";
 import { toWhereFiltersWithColumns } from "../../utils/filters";
 import { formatBody, formatQueryParams } from "../../utils/formatters";
 
@@ -10,36 +14,47 @@ export const get = (opt: any) =>
 
     if (!opt.pagination) {
       reply.code(200).send(
-        await req.model.find({
-          where: toWhereFiltersWithColumns(req.model.registeredFilters, where),
-          ...(opt.include && { include: opt.include(req, req.user) }),
-        })
-      );
-    } else {
-      reply.code(200).send(
-        await aggregator(
-          {
-            page,
-            view,
+        await withResponseFormatter(
+          req.model.find({
             where: toWhereFiltersWithColumns(
               req.model.registeredFilters,
               where
             ),
-          },
-          async (where) => {
-            const { count } = await req.model.aggregate({
-              _count: true,
-              where,
-            });
-            return count as number;
-          },
-          ({ where, limit, offset }) =>
-            req.model.find({
-              where,
-              limit,
-              offset,
-              ...(opt.include && { include: opt.include(req, req.user) }),
-            })
+            ...(opt.include && { include: opt.include(req, req.user) }),
+          }),
+          req.user,
+          opt
+        )
+      );
+    } else {
+      reply.code(200).send(
+        await withResponseFormatter(
+          aggregator(
+            {
+              page,
+              view,
+              where: toWhereFiltersWithColumns(
+                req.model.registeredFilters,
+                where
+              ),
+            },
+            async (where) => {
+              const { count } = await req.model.aggregate({
+                _count: true,
+                where,
+              });
+              return count as number;
+            },
+            ({ where, limit, offset }) =>
+              req.model.find({
+                where,
+                limit,
+                offset,
+                ...(opt.include && { include: opt.include(req, req.user) }),
+              })
+          ),
+          req.user,
+          opt
         )
       );
     }
@@ -54,7 +69,7 @@ export const post = (opt: any) =>
         `${req.model.table} entity failed to be created`
       );
     }
-    reply.code(201).send(data);
+    reply.code(201).send(withSimpleResponseFormatter(data, req.user, opt));
   };
 
 export const put = (opt: any) =>
@@ -71,7 +86,7 @@ export const put = (opt: any) =>
         `${req.model.table} entity/-ies failed to be updated`
       );
     }
-    reply.code(200).send(data);
+    reply.code(200).send(withSimpleResponseFormatter(data, req.user, opt));
   };
 
 export const remove = (opt: any) =>
@@ -86,5 +101,5 @@ export const remove = (opt: any) =>
         `${req.model.table} entity/-ies failed to be deleted`
       );
     }
-    reply.code(200).send(data);
+    reply.code(200).send(withSimpleResponseFormatter(data, req.user, opt));
   };

@@ -15,7 +15,7 @@ export function modelPreHandler(
   return async (req: FastifyRequest, reply: FastifyReply, done: any) => {
     if (auth && authModel && opt) {
       await authPrehandler(authModel, opt)(req, reply, done);
-      console.log();
+
       if (canAccess) {
         const isAccessPermitted = await canAccess(req.user);
         if (!isAccessPermitted) {
