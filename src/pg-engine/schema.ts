@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  PathParamsSchemaLEX,
   QueryParamsSchemaLEX,
   ResponseSchemaLEX,
   StatementResponseSchemaLEX,
@@ -72,7 +73,7 @@ export const forgotPasswordBodySchema = z.object({
   email: z.string().trim().email(),
 });
 
-const columnToZodType = (column: Column) => {
+const columnToZodType = (column: Column, strict = true) => {
   let chain: any = z;
   let isArray = false;
   if (column.type.includes("[]") || column.type === "ARRAY") {
@@ -116,7 +117,7 @@ const columnToZodType = (column: Column) => {
     return z.array(chain);
   }
 
-  if (column.columnConfig.nullable) {
+  if (column.columnConfig.nullable && strict) {
     return z.union([chain.optional(), z.null()]).optional();
   }
 
@@ -162,6 +163,27 @@ export const buildModelQueryParamsSchema = (
         return acc;
       }, {} as any)
     ),
+  };
+};
+
+export const buildModelPathParamsSchema = (
+  model: Model,
+  identifier?: string
+) => {
+  if (!identifier) {
+    return {};
+  }
+
+  const column = (model.columns as any)?.[identifier];
+
+  if (!column) {
+    return {};
+  }
+
+  return {
+    [toSchemaRef(model.table, PathParamsSchemaLEX)]: z.object({
+      [identifier]: columnToZodType(column, false),
+    }),
   };
 };
 

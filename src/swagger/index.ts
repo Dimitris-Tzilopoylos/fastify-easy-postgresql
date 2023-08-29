@@ -25,6 +25,7 @@ export const registerZodSwagger = async (server: FastifyInstance) => {
         }),
       }
     : {};
+
   await register(server, {
     jsonSchemas,
     ...swaggerConfig,

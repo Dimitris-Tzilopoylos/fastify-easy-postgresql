@@ -25,7 +25,19 @@ const start = async () => {
         },
       },
       modelOptions: {
+        payment_methods: {
+          pagination: false,
+        },
+        users: {
+          pagination: false,
+          httpHandlers: {
+            get: {
+              include: (req, user) => ({ role: true }),
+            },
+          },
+        },
         products: {
+          identifier: "id",
           filters: {
             from_name: (value: string) => ({
               name: {
@@ -39,7 +51,7 @@ const start = async () => {
               auth: false,
               canAccess: async (user: any) => user?.role?.name === "superadmin",
               include: (req, user) => ({
-                category: { where: { name: { _eq: "jk" } } },
+                category: true,
               }),
             },
           },

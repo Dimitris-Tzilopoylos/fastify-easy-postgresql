@@ -6,7 +6,7 @@
       "to_table": "roles",
       "to_column": "id",
       "type": "object",
-      "alias": "roles"
+      "alias": "role"
     }
   ],
   "products": [

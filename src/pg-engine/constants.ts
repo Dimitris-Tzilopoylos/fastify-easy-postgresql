@@ -10,3 +10,4 @@ export const EngineQueries = {
 export const StatementResponseSchemaLEX = "StatementResponse";
 export const ResponseSchemaLEX = "Response";
 export const QueryParamsSchemaLEX = "QueryParams";
+export const PathParamsSchemaLEX = "PathParams";

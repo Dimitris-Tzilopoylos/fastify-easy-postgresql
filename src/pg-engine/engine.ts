@@ -14,10 +14,12 @@ import {
   buildModelStatementResponseSchema,
   buildLoginRequestBodySchema,
   buildRegisterRequestBodySchema,
+  buildModelPathParamsSchema,
 } from "./schema";
 import { buildJsonSchemas } from "fastify-zod";
 import { z } from "zod";
 import {
+  PathParamsSchemaLEX,
   QueryParamsSchemaLEX,
   ResponseSchemaLEX,
   StatementResponseSchemaLEX,
@@ -95,7 +97,7 @@ export default class Engine {
         Engine.schemas[model.table][toSchemaRef(model.table)];
       const currentModelOptions = modelOptions?.[model.table] || {};
       const modelFilters = Engine.modelColumnFilters?.[model.table] || {};
-      const { httpHandlers } = currentModelOptions || {};
+      const { httpHandlers, identifier } = currentModelOptions || {};
       const pagination =
         typeof currentModelOptions.pagination === "undefined"
           ? true
@@ -120,6 +122,7 @@ export default class Engine {
           model,
           modelZodSchema
         ),
+        modelParamsZodSchema: buildModelPathParamsSchema(model, identifier),
         schemaName: toSchemaRef(model.table),
         getResponseSchemaName: toSchemaRef(model.table, ResponseSchemaLEX),
         queryParamsSchemaName: toSchemaRef(model.table, QueryParamsSchemaLEX),
@@ -127,10 +130,12 @@ export default class Engine {
           model.table,
           StatementResponseSchemaLEX
         ),
+        paramsSchemaName: toSchemaRef(model.table, PathParamsSchemaLEX),
         modelFilters,
         pagination,
         httpHandlers,
         effects: modelEffects,
+        identifier,
       };
 
       Object.entries(modelEffects as Record<any, Promise<void>>).forEach(
@@ -184,6 +189,7 @@ export default class Engine {
             modelGetResponseZodSchema,
             modelZodQueryParamsSchema,
             modelStatementResponseZodSchema,
+            modelParamsZodSchema,
             model,
           }
         ) => {
@@ -193,6 +199,7 @@ export default class Engine {
             ...modelGetResponseZodSchema,
             ...modelZodQueryParamsSchema,
             ...modelStatementResponseZodSchema,
+            ...modelParamsZodSchema,
             ...(model.table === Engine.authConfig.table &&
               buildLoginRequestBodySchema(model, Engine.authConfig)),
             ...(model.table === Engine.authConfig.table &&

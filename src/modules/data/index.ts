@@ -1,6 +1,13 @@
 import { FastifyInstance } from "fastify";
 import { modelPreHandler } from "./modelPrehandler";
-import { get, post, put, remove } from "./controllers";
+import {
+  get,
+  getByIdentifier,
+  post,
+  put,
+  putByIdentifier,
+  remove,
+} from "./controllers";
 import { toKebabCase, toUpperCaseModelTitle } from "../../utils/generic";
 import { $Ref, JsonSchema } from "fastify-zod/build/JsonSchema";
 import { EngineApiRoute } from "../../pg-engine/types";
@@ -13,7 +20,14 @@ export function dataRoutes({
 }) {
   return async (fastify: FastifyInstance) => {
     Object.values(fastify.engine.apiRoutes).forEach((value: EngineApiRoute) => {
-      const model = value.model;
+      const {
+        model,
+        identifier,
+        paramsSchemaName,
+        modelParamsZodSchema,
+        queryParamsSchemaName,
+        modelZodQueryParamsSchema,
+      } = value;
       const apiRoute = `/${toKebabCase(model.table)}`;
 
       const getHeaders = fastify.engine.modelHasEnabledAuthForMethod(
@@ -40,6 +54,16 @@ export function dataRoutes({
       )
         ? { headers: $ref("authSchema") }
         : {};
+
+      const $paramsRef =
+        identifier && paramsSchemaName
+          ? { params: $ref(paramsSchemaName) }
+          : {};
+
+      const withIdentifierEndpoint =
+        identifier && paramsSchemaName
+          ? `${apiRoute}/:${identifier}`
+          : apiRoute;
 
       const getPreHandler = modelPreHandler(
         value.modelFactory,
@@ -114,20 +138,85 @@ export function dataRoutes({
         })
       );
 
+      if (identifier && paramsSchemaName) {
+        fastify.get(
+          withIdentifierEndpoint,
+          {
+            preHandler: getPreHandler,
+            schema: {
+              tags: [toUpperCaseModelTitle(model.table)],
+              ...getHeaders,
+              ...$paramsRef,
+              response: {
+                200: $ref(value.schemaName),
+              },
+            },
+          },
+          getByIdentifier({
+            identifier,
+            modelParamsZodSchema: modelParamsZodSchema[paramsSchemaName],
+            include: value.httpHandlers?.get?.include,
+            responseFormatter: value.httpHandlers?.get?.responseFormatter,
+          })
+        );
+        fastify.put(
+          withIdentifierEndpoint,
+          {
+            preHandler: putPreHandler,
+            schema: {
+              tags: [toUpperCaseModelTitle(model.table)],
+              ...putHeaders,
+              ...$paramsRef,
+              response: {
+                200: $ref(value.statementResponseSchemaName),
+              },
+            },
+          },
+          putByIdentifier({
+            identifier,
+            modelParamsZodSchema: value.modelParamsZodSchema[paramsSchemaName],
+            responseFormatter: value.httpHandlers?.put?.responseFormatter,
+          })
+        );
+
+        fastify.delete(
+          withIdentifierEndpoint,
+          {
+            preHandler: removePreHandler,
+            schema: {
+              tags: [toUpperCaseModelTitle(model.table)],
+              ...deleteHeaders,
+              ...$paramsRef,
+              response: {
+                200: $ref(value.statementResponseSchemaName),
+              },
+            },
+          },
+          remove({
+            identifier,
+            modelParamsZodSchema: value.modelParamsZodSchema[paramsSchemaName],
+            responseFormatter: value.httpHandlers?.delete?.responseFormatter,
+          })
+        );
+      }
       fastify.put(
         apiRoute,
         {
           preHandler: putPreHandler,
           schema: {
             tags: [toUpperCaseModelTitle(model.table)],
-            querystring: $ref(value.queryParamsSchemaName),
+            querystring: $ref(queryParamsSchemaName),
             ...putHeaders,
+            ...$paramsRef,
             response: {
               200: $ref(value.statementResponseSchemaName),
             },
           },
         },
         put({
+          identifier,
+          modelQueryParamsZodSchema:
+            modelZodQueryParamsSchema?.[queryParamsSchemaName],
           responseFormatter: value.httpHandlers?.put?.responseFormatter,
         })
       );
@@ -140,6 +229,7 @@ export function dataRoutes({
             tags: [toUpperCaseModelTitle(model.table)],
             querystring: $ref(value.queryParamsSchemaName),
             ...deleteHeaders,
+            ...$paramsRef,
             response: {
               200: $ref(value.statementResponseSchemaName),
             },
@@ -147,6 +237,8 @@ export function dataRoutes({
         },
         remove({
           responseFormatter: value.httpHandlers?.delete?.responseFormatter,
+          modelQueryParamsZodSchema:
+            modelZodQueryParamsSchema?.[queryParamsSchemaName],
         })
       );
     });

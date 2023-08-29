@@ -68,12 +68,15 @@ export type EngineApiRoute = {
   modelGetResponseZodSchema: any;
   modelZodQueryParamsSchema: any;
   modelStatementResponseZodSchema: any;
+  modelParamsZodSchema?: any;
   schemaName: string;
   getResponseSchemaName: string;
   queryParamsSchemaName: string;
   statementResponseSchemaName: string;
+  paramsSchemaName?: string;
   httpHandlers?: ModelHttpHandlers;
   effects?: Record<string, Promise<void>>;
+  identifier?: string;
 };
 
 export type EngineSwaggerOptions = {
@@ -96,6 +99,7 @@ export type PGEngineOptions = {
   modelOptions?: Record<
     string,
     {
+      identifier?: string;
       filters?: Record<string, (value: any, where?: any, data?: any) => any>;
       pagination?: boolean;
       httpHandlers?: ModelHttpHandlers;
