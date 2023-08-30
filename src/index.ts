@@ -3,6 +3,7 @@ dotenv.config();
 import server from "./app";
 import { normalizeNumber } from "./utils/generic";
 import registerEngine from "./plugin";
+import { writeSwaggerFile } from "./utils/swagger";
 
 const start = async () => {
   try {
@@ -48,7 +49,7 @@ const start = async () => {
           pagination: false,
           httpHandlers: {
             get: {
-              auth: false,
+              auth: true,
               canAccess: async (user: any) => user?.role?.name === "superadmin",
               include: (req, user) => ({
                 category: true,
@@ -63,6 +64,9 @@ const start = async () => {
       host: process.env.HOST,
       port: normalizeNumber(process.env.PORT),
     });
+    if (process.env.NODE_ENV === "development") {
+      await writeSwaggerFile(server);
+    }
   } catch (err) {
     server.log.error(err);
     process.exit(1);
