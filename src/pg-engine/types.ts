@@ -91,7 +91,19 @@ export type EngineSwaggerOptions = {
   };
 };
 
+export type CustomMigrationConfig = {
+  up: string;
+  down: string;
+};
+
+export type MigrationOptions = {
+  reset?: boolean;
+  additionalMigrations?: CustomMigrationConfig[];
+  schema?: string;
+};
+
 export type PGEngineOptions = {
+  migrationOptions?: MigrationOptions;
   disableApiHandlers?: boolean;
   apiPrefix?: string;
   swaggerConfig?: EngineSwaggerOptions;

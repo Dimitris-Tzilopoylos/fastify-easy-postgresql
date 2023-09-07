@@ -14,6 +14,7 @@ const fastifyPGEngine = async (
   next: any
 ) => {
   const {
+    migrationOptions,
     disableApiHandlers = false,
     apiPrefix = "api/v1",
     authOptions,
@@ -26,7 +27,11 @@ const fastifyPGEngine = async (
   }
 
   await server.register(fastifySensible);
-  await Engine.init({ modelOptions, authConfig: authOptions });
+  await Engine.init({
+    modelOptions,
+    authConfig: authOptions,
+    ...migrationOptions,
+  });
   Engine.db.enableLog = false;
   fastify.decorate("engine", Engine);
   fastify.decorateRequest("model", null);

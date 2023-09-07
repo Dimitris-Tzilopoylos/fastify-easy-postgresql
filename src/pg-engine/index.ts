@@ -3,11 +3,14 @@ import {
   Model,
   Column as DBColumn,
   Relation as DBRelation,
+  Migrations,
+  DBManager,
 } from "easy-postgresql";
 import { EngineQueries, schema } from "./constants";
 import { normalizeNumber } from "../utils/generic";
-import { Column, ModelFilters, Relation } from "./types";
+import { Column, MigrationOptions, ModelFilters, Relation } from "./types";
 import fs from "fs/promises";
+import fsSync from "fs";
 import path from "path";
 
 DB.registerDatabase(schema);
@@ -64,9 +67,27 @@ export async function getTableColumns(table: string): Promise<Column[]> {
     const { rows } = await DB.pool.query(EngineQueries.getTableColumns, [
       table,
     ]);
-    return (rows || []).map((x: any) =>
-      x.type === "ARRAY" ? { ...x, type: `${x.mixed_column_type}[]` } : x
-    ) as Column[];
+    const { rows: primaryKeys } = await DB.pool.query(
+      EngineQueries.getTablePrimaryKeys,
+      [schema, table]
+    );
+
+    const { rows: uniqueColumns } = await DB.pool.query(
+      EngineQueries.getTableUniqueColumns,
+      [schema, table, schema, table]
+    );
+
+    return (rows || []).map((x: any) => ({
+      ...x,
+      primary: primaryKeys.some((column: any) => column.column_name === x.name),
+      auto_increment: primaryKeys.some(
+        (column: any) =>
+          column.column_name === x.name && column.is_auto_increment === "yes"
+      ),
+      type: x.type === "ARRAY" ? `${x.mixed_column_type}[]` : x.type,
+      defaultValue: x.default_value,
+      unique: uniqueColumns.some((c: any) => c.column_name === x.name),
+    })) as Column[];
   } catch (error) {
     return [] as Column[];
   }
@@ -94,7 +115,50 @@ export async function loadSchemaTablesWithColumns() {
   }
 }
 
-export async function init() {
+export async function applyMigrations({
+  schema: dbSchema,
+  reset = false,
+  additionalMigrations = [],
+}: MigrationOptions) {
+  dbSchema = dbSchema || schema;
+  if (reset) {
+    await DBManager.dropSchema(schema);
+    fsSync.rmSync(path.join(process.cwd(), "migrations"), {
+      recursive: true,
+      force: true,
+    });
+  }
+
+  const isInitialLoad = !Migrations.migrationsFolderExists();
+
+  Migrations.createMigrationsFolder();
+  if (!isInitialLoad) {
+    await Migrations.runNewMigration(
+      async () => await DBManager.createSchema(schema)
+    ).catch((err) => console.error(err));
+
+    for (const model of Object.values(DB.models || {})) {
+      await Migrations.runNewMigration(
+        async () => await DBManager.createTable(model)
+      ).catch((err) => console.log(err));
+    }
+
+    if (additionalMigrations.length) {
+      for (const migration of additionalMigrations) {
+        await Migrations.createMigration(migration);
+      }
+    }
+  }
+
+  await Migrations.applyMigrations();
+}
+
+export async function init({
+  schema,
+  reset,
+  additionalMigrations,
+}: MigrationOptions) {
   await loadSchemaTablesWithColumns();
+  await applyMigrations({ schema, reset, additionalMigrations });
   return DB;
 }

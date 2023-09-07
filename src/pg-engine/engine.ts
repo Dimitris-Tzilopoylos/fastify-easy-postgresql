@@ -1,4 +1,4 @@
-import { DB, Model } from "easy-postgresql";
+import { Column, DB, Model } from "easy-postgresql";
 import { init } from ".";
 import { toKebabCase, toSchemaRef } from "../utils/generic";
 import {
@@ -61,11 +61,17 @@ export default class Engine {
   static async init({
     modelOptions,
     authConfig,
+    reset = false,
+    additionalMigrations = [],
+    schema: dbSchema,
   }: {
     modelOptions: any;
     authConfig?: EngineAuthConfig;
+    reset?: boolean;
+    additionalMigrations?: { up: string; down: string }[];
+    schema?: string;
   }) {
-    Engine.db = await init();
+    Engine.db = await init({ schema: dbSchema, reset, additionalMigrations });
 
     Engine.authConfig = {
       ...Engine.authConfig,
@@ -97,7 +103,8 @@ export default class Engine {
         Engine.schemas[model.table][toSchemaRef(model.table)];
       const currentModelOptions = modelOptions?.[model.table] || {};
       const modelFilters = Engine.modelColumnFilters?.[model.table] || {};
-      const { httpHandlers, identifier } = currentModelOptions || {};
+      const { httpHandlers, identifier = Engine.getModelIdentifier(model) } =
+        currentModelOptions || {};
       const pagination =
         typeof currentModelOptions.pagination === "undefined"
           ? true
@@ -308,5 +315,16 @@ export default class Engine {
     config: EngineApiRoute
   ) {
     return config?.httpHandlers?.[method]?.canAccess;
+  }
+
+  static getModelIdentifier(model: Model) {
+    const ids = (Object.values(model.columns) as Column[]).filter(
+      (c) => c.columnConfig.primary
+    );
+    if (ids.length !== 1) {
+      return;
+    }
+
+    return ids[0].column;
   }
 }
