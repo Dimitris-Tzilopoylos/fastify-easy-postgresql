@@ -327,4 +327,8 @@ export default class Engine {
 
     return ids[0].column;
   }
+
+  static model(table: string): Model {
+    return new ((Engine.db.modelFactory as any)?.[table])();
+  }
 }
