@@ -1,5 +1,4 @@
 import { FastifyInstance } from "fastify";
-import server from "../app";
 import Engine from "../pg-engine/engine";
 import fastifySensible from "@fastify/sensible";
 import { registerZodSwagger } from "../swagger";
@@ -26,7 +25,6 @@ const fastifyPGEngine = async (
     Engine.swaggerOptions = swaggerConfig;
   }
 
-  await server.register(fastifySensible);
   await Engine.init({
     modelOptions,
     authConfig: authOptions,
@@ -63,6 +61,7 @@ const registerEngine = async (
   server: FastifyInstance,
   options: PGEngineOptions
 ) => {
+  await server.register(fastifySensible);
   await server.register(fastifyPGEngine, options);
 };
 
