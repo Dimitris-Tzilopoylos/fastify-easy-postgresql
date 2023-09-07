@@ -16,7 +16,7 @@ export type HttpVerbKey = "get" | "post" | "put" | "delete";
 
 export type BaseModelHttpHandlerConfig = {
   auth?: boolean;
-  canAccess?: (user: any) => Promise<boolean>;
+  canAccess?: (user: any, req: any) => Promise<boolean>;
   queryParamsFormatter?: (value: any, user: any) => any;
   paramsFormatter?: (value: any, user: any) => any;
   responseFormatter?: (data: any, user: any) => any;

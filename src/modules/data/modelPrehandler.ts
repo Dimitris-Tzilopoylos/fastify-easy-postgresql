@@ -8,7 +8,7 @@ export function modelPreHandler(
   modelFactory: any,
   modelFilters?: ModelFilters,
   auth?: boolean,
-  canAccess?: (user: any) => Promise<boolean>,
+  canAccess?: (user: any, req: any) => Promise<boolean>,
   authModel?: any,
   opt?: EngineAuthConfig
 ): (req: FastifyRequest, reply: FastifyReply, done: any) => Promise<void> {
@@ -17,7 +17,7 @@ export function modelPreHandler(
       await authPrehandler(authModel, opt)(req, reply, done);
 
       if (canAccess) {
-        const isAccessPermitted = await canAccess(req.user);
+        const isAccessPermitted = await canAccess(req.user, req);
         if (!isAccessPermitted) {
           throw server.httpErrors.forbidden(
             "Access to this resource is restricted"
