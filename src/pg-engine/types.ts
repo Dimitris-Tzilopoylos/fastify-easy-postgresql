@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { columnSchema, dbTableSchema, relationSchema } from "./schema";
-import { Model } from "easy-postgresql";
+import { Model } from "easy-psql";
 import jwt from "jsonwebtoken";
 import { FastifyRequest } from "fastify";
 

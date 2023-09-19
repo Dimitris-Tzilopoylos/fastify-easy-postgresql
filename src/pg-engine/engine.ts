@@ -1,4 +1,4 @@
-import { Column, DB, Model } from "easy-postgresql";
+import { Column, DB, Model } from "easy-psql";
 import { init } from ".";
 import { toKebabCase, toSchemaRef } from "../utils/generic";
 import {

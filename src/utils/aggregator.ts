@@ -1,4 +1,4 @@
-import { DB } from "easy-postgresql";
+import { DB } from "easy-psql";
 
 export const aggregator = async (
   args: any,

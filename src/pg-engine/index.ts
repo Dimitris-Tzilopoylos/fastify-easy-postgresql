@@ -5,7 +5,7 @@ import {
   Relation as DBRelation,
   Migrations,
   DBManager,
-} from "easy-postgresql";
+} from "easy-psql";
 import { EngineQueries, schema } from "./constants";
 import { normalizeNumber } from "../utils/generic";
 import { Column, MigrationOptions, ModelFilters, Relation } from "./types";

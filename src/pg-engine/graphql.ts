@@ -1,4 +1,4 @@
-import { Column, Model, Relation } from "easy-postgresql";
+import { Column, Model, Relation } from "easy-psql";
 import Engine from "./engine";
 import {
   gqlBoolean,

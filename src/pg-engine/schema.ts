@@ -8,7 +8,7 @@ import {
   object_relation,
   schema,
 } from "./constants";
-import { Model, Column } from "easy-postgresql";
+import { Model, Column } from "easy-psql";
 import { toSchemaRef } from "../utils/generic";
 import { EngineAuthConfig, ModelFilters } from "./types";
 
@@ -105,7 +105,7 @@ const columnToZodType = (column: Column, strict = true) => {
   } else if (column.type.startsWith("bool")) {
     chain = z.boolean();
   } else if (column.type.startsWith("json")) {
-    chain = z.object({});
+    chain = z.any();
   } else {
     chain = z.any();
   }

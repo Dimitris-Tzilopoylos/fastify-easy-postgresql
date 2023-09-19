@@ -4,6 +4,7 @@ import server from "./app";
 import { normalizeNumber } from "./utils/generic";
 import registerEngine from "./plugin";
 import { writeSwaggerFile } from "./utils/swagger";
+import cluster from "node:cluster";
 
 const start = async () => {
   try {
@@ -26,7 +27,10 @@ const start = async () => {
         },
       },
       modelOptions: {
-        payment_methods: {
+        roles: {
+          pagination: false,
+        },
+        tags: {
           pagination: false,
         },
         users: {
@@ -73,4 +77,14 @@ const start = async () => {
   }
 };
 
-start();
+if (cluster.isPrimary) {
+  for (let i = 0; i < 16; i++) {
+    cluster.fork();
+  }
+
+  cluster.on("exit", (worker, code, signal) => {
+    console.log(`worker ${worker.process.pid} died`);
+  });
+} else {
+  start();
+}

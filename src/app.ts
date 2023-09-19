@@ -1,5 +1,5 @@
 import fastify, { FastifyInstance as BaseFastifyInstance } from "fastify";
-import { Model } from "easy-postgresql";
+import { Model } from "easy-psql";
 import Engine from "./pg-engine/engine";
 import { ModelFilters } from "./pg-engine/types";
 
